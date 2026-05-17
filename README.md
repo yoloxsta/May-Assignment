@@ -178,3 +178,281 @@ This project demonstrates:
 
 - Stop conflicting services on ports 3000, 8080, or 5432
 - Or change ports in `docker-compose.yml`
+
+
+---
+
+# Nexus Repository Integration
+
+## What is Nexus Repository?
+
+Nexus Repository is a binary artifact manager. It stores and manages your build artifacts (JAR files, Docker images, npm packages, etc.) in a central location.
+
+## Why Use Nexus?
+
+| Benefit | Description |
+|---------|-------------|
+| **Centralized Storage** | All artifacts in one place - no more "where is that JAR?" |
+| **Version Control** | Track versions, never lose old builds |
+| **Faster Builds** | Cache dependencies locally, no need to download from internet every time |
+| **Security** | Scan artifacts for vulnerabilities before use |
+| **Team Collaboration** | Share artifacts across teams easily |
+| **Offline Builds** | Work without internet connection using cached dependencies |
+
+## Nexus Repository Types
+
+| Type | Used For | This Project |
+|------|----------|--------------|
+| **Maven (Hosted)** | Store your JAR files | Backend Java artifacts |
+| **Docker (Hosted)** | Store Docker images | Frontend & Backend images |
+| **Docker (Proxy)** | Cache Docker Hub images | Speed up pulls |
+| **npm (Proxy)** | Cache npm packages | Future npm dependencies |
+| **Maven (Proxy)** | Cache Maven Central | Java dependencies |
+
+## How to Use Nexus in This Project
+
+### Option 1: Store Java Artifacts (JAR) in Nexus
+
+#### Step 1: Configure Maven Settings
+
+Create or edit `~/.m2/settings.xml`:
+
+```xml
+<settings>
+  <servers>
+    <server>
+      <id>nexus-releases</id>
+      <username>admin</username>
+      <password>your_password</password>
+    </server>
+    <server>
+      <id>nexus-snapshots</id>
+      <username>admin</username>
+      <password>your_password</password>
+    </server>
+  </servers>
+
+  <profiles>
+    <profile>
+      <id>nexus</id>
+      <repositories>
+        <repository>
+          <id>nexus-releases</id>
+          <url>http://localhost:8081/repository/maven-releases/</url>
+        </repository>
+        <repository>
+          <id>nexus-snapshots</id>
+          <url>http://localhost:8081/repository/maven-snapshots/</url>
+        </repository>
+      </repositories>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>nexus</activeProfile>
+  </activeProfiles>
+</settings>
+```
+
+#### Step 2: Add pom.xml to Backend
+
+Create `backend/pom.xml`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <groupId>com.todoapp</groupId>
+    <artifactId>todo-backend</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <distributionManagement>
+        <repository>
+            <id>nexus-releases</id>
+            <url>http://localhost:8081/repository/maven-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus-snapshots</id>
+            <url>http://localhost:8081/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.4</version>
+        </dependency>
+    </dependencies>
+</project>
+```
+
+#### Step 3: Publish to Nexus
+
+```bash
+cd backend
+mvn deploy
+```
+
+---
+
+### Option 2: Store Docker Images in Nexus
+
+#### Step 1: Create Docker Repository in Nexus
+
+1. Open Nexus UI: `http://localhost:8081`
+2. Login (default: admin / admin123)
+3. Go to **Repository → Repositories → Create repository**
+4. Select **docker (hosted)**
+5. Configure:
+   - Name: `docker-hosted`
+   - HTTP Port: `8082`
+   - Enable Docker V1: Yes
+
+#### Step 2: Configure Docker to Trust Nexus
+
+```bash
+# Add Nexus to insecure registries (for HTTP)
+# Edit /etc/docker/daemon.json:
+{
+  "insecure-registries": ["localhost:8082"]
+}
+
+# Restart Docker
+sudo systemctl restart docker
+```
+
+#### Step 3: Login to Nexus Docker Registry
+
+```bash
+docker login localhost:8082
+# Username: admin
+# Password: your_password
+```
+
+#### Step 4: Tag and Push Images
+
+```bash
+# Build images
+docker-compose build
+
+# Tag for Nexus
+docker tag todo-app-backend localhost:8082/todo-backend:1.0.0
+docker tag todo-app-frontend localhost:8082/todo-frontend:1.0.0
+
+# Push to Nexus
+docker push localhost:8082/todo-backend:1.0.0
+docker push localhost:8082/todo-frontend:1.0.0
+```
+
+#### Step 5: Pull from Nexus
+
+```bash
+docker pull localhost:8082/todo-backend:1.0.0
+docker pull localhost:8082/todo-frontend:1.0.0
+```
+
+---
+
+### Option 3: Use Nexus as Docker Proxy (Cache)
+
+Speed up builds by caching images from Docker Hub.
+
+#### Step 1: Create Docker Proxy Repository
+
+1. In Nexus UI, create **docker (proxy)** repository
+2. Configure:
+   - Name: `docker-proxy`
+   - Remote URL: `https://registry-1.docker.io`
+   - HTTP Port: `8083`
+
+#### Step 2: Configure Docker to Use Proxy
+
+```bash
+# Edit /etc/docker/daemon.json:
+{
+  "registry-mirrors": ["http://localhost:8083"]
+}
+
+# Restart Docker
+sudo systemctl restart docker
+```
+
+Now all `docker pull` commands go through Nexus cache!
+
+---
+
+## GitHub Actions: Push to Nexus
+
+Add to `.github/workflows/ci.yml` for automated publishing:
+
+```yaml
+  push-to-nexus:
+    name: Push Docker Images to Nexus
+    runs-on: ubuntu-latest
+    needs: [backend-scan, frontend-scan]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Nexus
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.NEXUS_URL }}
+          username: ${{ secrets.NEXUS_USER }}
+          password: ${{ secrets.NEXUS_PASSWORD }}
+
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ secrets.NEXUS_URL }}/todo-backend:${{ github.sha }}
+
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ secrets.NEXUS_URL }}/todo-frontend:${{ github.sha }}
+```
+
+Add these secrets to your GitHub repository:
+- `NEXUS_URL` - Your Nexus URL (e.g., `nexus.example.com:8082`)
+- `NEXUS_USER` - Nexus username
+- `NEXUS_PASSWORD` - Nexus password
+
+---
+
+## Running Nexus Locally (Docker)
+
+```bash
+# Start Nexus
+docker run -d \
+  --name nexus \
+  -p 8081:8081 \
+  -p 8082:8082 \
+  -p 8083:8083 \
+  sonatype/nexus3:latest
+
+# Wait for startup (takes 1-2 minutes)
+docker logs -f nexus
+
+# Access Nexus UI
+# URL: http://localhost:8081
+# Default user: admin
+# Password: Check docker logs for initial password
+```
+
+---
+
+## Quick Reference
+
+| Task | Command |
+|------|---------|
+| Login to Nexus | `docker login localhost:8082` |
+| Push image | `docker push localhost:8082/image:tag` |
+| Pull image | `docker pull localhost:8082/image:tag` |
+| List images in Nexus | Nexus UI → Browse → docker-hosted |
+| Deploy JAR | `mvn deploy` |
