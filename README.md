@@ -1,5 +1,7 @@
 # Todo App - Full Stack Project
 
+> **Java Project Assignment - May 2026**
+
 A simple full-stack todo application with separated frontend and backend, fully dockerized.
 
 ## Tech Stack
