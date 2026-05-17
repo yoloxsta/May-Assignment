@@ -57,6 +57,24 @@ todo-app/
 | PUT | /api/tasks?id={id} | Toggle task completion |
 | DELETE | /api/tasks?id={id} | Delete a task |
 
+## Environment Variables
+
+Create a `.env` file in the project root (or copy from `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DB_HOST` | Database hostname | `db` |
+| `DB_PORT` | Database port | `5432` |
+| `DB_NAME` | Database name | `tododb` |
+| `DB_USER` | Database user | `postgres` |
+| `DB_PASSWORD` | Database password | `postgres` |
+| `BACKEND_PORT` | Backend API port | `8080` |
+| `FRONTEND_PORT` | Frontend UI port | `3000` |
+
 ## Prerequisites
 
 - Docker Desktop installed

@@ -1,5 +1,5 @@
-// Backend API URL - change this if backend runs on different port
-const API_URL = 'http://localhost:8080/api/tasks';
+// Backend API URL - configured via environment or default to localhost:8080
+const API_URL = (window.BACKEND_URL || 'http://localhost:8080') + '/api/tasks';
 
 // Load tasks when page loads
 document.addEventListener('DOMContentLoaded', loadTasks);
