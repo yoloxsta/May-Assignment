@@ -306,6 +306,98 @@ https://your-nexus-url/repository/maven-releases/com/todoapp/todo-backend/1.0.0/
 
 ---
 
+## How to Use the Artifact
+
+### What is the Artifact?
+
+The artifact is your compiled Java application stored in Nexus. Think of it like a "package" of your code that others can download and use.
+
+### Why Store Artifacts in Nexus?
+
+| Without Nexus | With Nexus |
+|---------------|------------|
+| Share JAR files via email/Slack | Central repository - everyone knows where to find it |
+| "Which version is latest?" confusion | Version tracking - `1.0.0`, `1.0.1`, `1.1.0` |
+| Manual file copying | One command to download |
+| No dependency management | Automatic dependency resolution |
+
+### Usage 1: As a Dependency in Another Java Project
+
+If another team wants to use your todo-backend as a library, they add this to their `pom.xml`:
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.todoapp</groupId>
+        <artifactId>todo-backend</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+</dependencies>
+```
+
+They also need your Nexus in their `settings.xml`:
+
+```xml
+<repositories>
+    <repository>
+        <id>nexus-releases</id>
+        <url>https://your-nexus-url/repository/maven-releases/</url>
+    </repository>
+</repositories>
+```
+
+Then Maven will automatically download your JAR from Nexus.
+
+### Usage 2: Download Manually
+
+Download the artifact directly from Nexus:
+
+```
+https://your-nexus-url/repository/maven-releases/com/todoapp/todo-backend/1.0.0/todo-backend-1.0.0.jar
+```
+
+### Usage 3: Run the Application
+
+```bash
+# Download the fat JAR (includes all dependencies)
+wget https://your-nexus-url/repository/maven-releases/com/todoapp/todo-backend/1.0.0/todo-backend-1.0.0-all.jar
+
+# Run it
+java -jar todo-backend-1.0.0-all.jar
+```
+
+### Real-World Use Cases
+
+| Scenario | How Nexus Helps |
+|----------|-----------------|
+| **CI/CD Pipeline** | Jenkins/GitHub Actions downloads artifact from Nexus to deploy |
+| **Team Collaboration** | Developer A builds, uploads to Nexus. Developer B downloads and tests |
+| **Rollback** | Bug in v1.1.0? Redeploy v1.0.0 from Nexus |
+| **Microservices** | Service A depends on Service B's library - fetches from Nexus |
+| **Offline Development** | Nexus caches dependencies locally, no need to hit Maven Central every time |
+
+### The Flow
+
+```
+┌──────────────┐     mvn deploy      ┌──────────────┐
+│   Developer  │ ──────────────────▶ │    Nexus     │
+│   (You)      │                     │  Repository  │
+└──────────────┘                     └──────────────┘
+                                            │
+                         ┌──────────────────┼──────────────────┐
+                         ▼                  ▼                  ▼
+                   ┌──────────┐       ┌──────────┐       ┌──────────┐
+                   │  CI/CD   │       │ Other    │       │  Prod    │
+                   │  Server  │       │ Devs     │       │  Server  │
+                   └──────────┘       └──────────┘       └──────────┘
+                         │                  │                  │
+                         └──────────────────┴──────────────────┘
+                                    Downloads artifact
+                                      mvn dependency
+```
+
+---
+
 ### Option 2: Store Docker Images in Nexus
 
 #### Step 1: Create Docker Repository in Nexus
