@@ -9,6 +9,9 @@ backend/out/
 backend/target/
 *.log
 
+# Maven generated files
+backend/dependency-reduced-pom.xml
+
 # IDE files
 .idea/
 *.iml
@@ -24,6 +27,9 @@ Thumbs.db
 .env
 .env.local
 *.env
+
+# Maven settings (contains credentials)
+.m2/
 
 # Docker volumes (local)
 postgres-data/

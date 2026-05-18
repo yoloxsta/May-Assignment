@@ -215,7 +215,7 @@ Nexus Repository is a binary artifact manager. It stores and manages your build 
 
 #### Step 1: Configure Maven Settings
 
-Create or edit `~/.m2/settings.xml`:
+Create `.m2/settings.xml` in your project root with your Nexus credentials:
 
 ```xml
 <settings>
@@ -238,11 +238,11 @@ Create or edit `~/.m2/settings.xml`:
       <repositories>
         <repository>
           <id>nexus-releases</id>
-          <url>http://localhost:8081/repository/maven-releases/</url>
+          <url>https://your-nexus-url/repository/maven-releases/</url>
         </repository>
         <repository>
           <id>nexus-snapshots</id>
-          <url>http://localhost:8081/repository/maven-snapshots/</url>
+          <url>https://your-nexus-url/repository/maven-snapshots/</url>
         </repository>
       </repositories>
     </profile>
@@ -254,45 +254,55 @@ Create or edit `~/.m2/settings.xml`:
 </settings>
 ```
 
-#### Step 2: Add pom.xml to Backend
+> **Note**: Add `.m2/` to `.gitignore` to avoid committing credentials.
 
-Create `backend/pom.xml`:
+#### Step 2: Publish to Nexus
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project>
-    <groupId>com.todoapp</groupId>
-    <artifactId>todo-backend</artifactId>
-    <version>1.0.0</version>
-    <packaging>jar</packaging>
+**Option A: Using Docker (recommended if Maven is not installed)**
 
-    <distributionManagement>
-        <repository>
-            <id>nexus-releases</id>
-            <url>http://localhost:8081/repository/maven-releases/</url>
-        </repository>
-        <snapshotRepository>
-            <id>nexus-snapshots</id>
-            <url>http://localhost:8081/repository/maven-snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>42.7.4</version>
-        </dependency>
-    </dependencies>
-</project>
+```bash
+docker run --rm \
+  -v $(pwd)/backend:/app \
+  -v $(pwd)/.m2:/root/.m2 \
+  -w /app \
+  maven:3.9-eclipse-temurin-21 \
+  mvn deploy -s /root/.m2/settings.xml
 ```
 
-#### Step 3: Publish to Nexus
+**Command breakdown:**
+
+| Flag | Description |
+|------|-------------|
+| `--rm` | Remove container after execution |
+| `-v backend:/app` | Mount project source code |
+| `-v .m2:/root/.m2` | Mount Maven settings with credentials |
+| `-w /app` | Set working directory |
+| `maven:3.9-eclipse-temurin-21` | Maven image with Java 21 |
+| `mvn deploy` | Build and upload to Nexus |
+
+**Option B: Using installed Maven**
+
+If you have Maven installed locally:
 
 ```bash
 cd backend
-mvn deploy
+mvn deploy -s ../.m2/settings.xml
 ```
+
+#### Step 3: Verify Upload
+
+After successful deployment, your artifact will be available at:
+
+```
+https://your-nexus-url/repository/maven-releases/com/todoapp/todo-backend/1.0.0/
+```
+
+#### Artifacts Produced
+
+| File | Description |
+|------|-------------|
+| `todo-backend-1.0.0.jar` | Regular JAR |
+| `todo-backend-1.0.0-all.jar` | Fat JAR (with all dependencies bundled) |
 
 ---
 
