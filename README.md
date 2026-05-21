@@ -14,7 +14,6 @@ A simple full-stack todo application with separated frontend and backend, fully 
 | Containerization | Docker, Docker Compose |
 
 ## Project Structure
-
 ```
 todo-app/
 ├── docker-compose.yml      # Docker orchestration
