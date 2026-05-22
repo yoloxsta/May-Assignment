@@ -80,7 +80,6 @@ cp .env.example .env
 - Docker Compose installed
 
 ## How to Run
-
 ### 1. Start all containers
 
 ```bash
