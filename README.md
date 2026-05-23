@@ -85,7 +85,6 @@ cp .env.example .env
 ```bash
 docker-compose up --build
 ```
-
 ### 2. Access the application
 
 - **Frontend UI**: http://localhost:3000
