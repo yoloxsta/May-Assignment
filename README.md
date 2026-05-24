@@ -98,7 +98,6 @@ Press `Ctrl+C` then:
 ```bash
 docker-compose down
 ```
-
 ## Features
 
 - Add new tasks
