@@ -117,7 +117,6 @@ CREATE TABLE tasks (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
-
 ## Development
 
 ### Run Backend Locally (without Docker)
